@@ -1,2 +1,3 @@
 # acp-openai-proxy
-Convert local ACP process into an OpenAI-compatible HTTP API
+
+Exposes a ACP(Agent Client Protocol) agent as an OpenAI-compatible API.
