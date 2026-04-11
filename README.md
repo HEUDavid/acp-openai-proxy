@@ -1,3 +1,3 @@
 # acp-openai-proxy
 
-Exposes a ACP(Agent Client Protocol) agent as an OpenAI-compatible API.
+Expose a ACP(Agent Client Protocol) agent as an OpenAPI-compatible HTTP server—instantly.
