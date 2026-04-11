@@ -17,8 +17,33 @@ type Handler struct {
 	registry *backend.Registry
 }
 
-func SetupRouter(registry *backend.Registry) *gin.Engine {
+func authMiddleware(apiKey string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if apiKey == "" {
+			c.Next()
+			return
+		}
+
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": gin.H{"message": "Missing or invalid Authorization header"}})
+			return
+		}
+
+		token := strings.TrimPrefix(authHeader, "Bearer ")
+		if token != apiKey {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": gin.H{"message": "Invalid API key"}})
+			return
+		}
+
+		c.Next()
+	}
+}
+
+func SetupRouter(registry *backend.Registry, apiKey string) *gin.Engine {
 	r := gin.Default()
+
+	r.Use(authMiddleware(apiKey))
 
 	handler := &Handler{registry: registry}
 
