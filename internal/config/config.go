@@ -8,6 +8,10 @@ import (
 
 // Config 统揽应用程序的配置文件参数
 type Config struct {
+	Server struct {
+		Port   int    `yaml:"port"`
+		APIKey string `yaml:"api_key"`
+	} `yaml:"server"`
 	Backends struct {
 		Gemini struct {
 			Enabled       bool     `yaml:"enabled"`
