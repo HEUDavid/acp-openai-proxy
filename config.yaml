@@ -1,3 +1,7 @@
+server:
+  port: 9528
+  api_key: test
+
 backends:
   gemini:
     enabled: true
