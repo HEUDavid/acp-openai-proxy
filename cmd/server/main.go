@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 
 	"github.com/yourname/acp-openai-proxy/internal/api"
@@ -11,16 +12,17 @@ import (
 )
 
 func main() {
-	port := flag.String("port", "9528", "Port to run the OpenAI bridge server on")
 	configPath := flag.String("config", "config.yaml", "Path to config file")
 	flag.Parse()
 
-	log.Printf("Starting Gemini OpenAI Bridge on port %s...", *port)
-
 	cfg, err := config.LoadConfig(*configPath)
 	if err != nil {
-		log.Printf("[Warning] Failed to load config from %s: %v. Running without preloaded models.", *configPath, err)
+		log.Printf("[Warning] Failed to load config from %s: %v. Using defaults.", *configPath, err)
+		cfg = &config.Config{}
 	}
+
+	port := cfg.Server.Port
+	log.Printf("Starting Gemini OpenAI Bridge on port %d...", port)
 
 	registry := backend.NewRegistry()
 	manager := gemini.NewManager()
@@ -40,8 +42,8 @@ func main() {
 		}
 	}
 
-	router := api.SetupRouter(registry)
-	if err := router.Run(":" + *port); err != nil {
+	router := api.SetupRouter(registry, cfg.Server.APIKey)
+	if err := router.Run(fmt.Sprintf(":%d", port)); err != nil {
 		log.Fatalf("Server exited with error: %v", err)
 	}
 }
