@@ -28,7 +28,7 @@ func main() {
 	manager := gemini.NewManager()
 	registry.Register(gemini.NewGeminiBackend(manager))
 
-	if err == nil && cfg != nil && cfg.Backends.Gemini.Enabled {
+	if err == nil && cfg.Backends.Gemini.Enabled {
 		for _, m := range cfg.Backends.Gemini.PreloadModels {
 			log.Printf("Preloading model process: %s ...", m)
 			go func(modelName string) {

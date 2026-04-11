@@ -6,6 +6,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const defaultPort = 9528
+
 // Config 统揽应用程序的配置文件参数
 type Config struct {
 	Server struct {
@@ -32,6 +34,10 @@ func LoadConfig(path string) (*Config, error) {
 	decoder := yaml.NewDecoder(file)
 	if err := decoder.Decode(&cfg); err != nil {
 		return nil, err
+	}
+
+	if cfg.Server.Port == 0 {
+		cfg.Server.Port = defaultPort
 	}
 
 	return &cfg, nil

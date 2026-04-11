@@ -97,7 +97,7 @@ func (h *Handler) handleChatCompletions(c *gin.Context) {
 		return
 	}
 
-	fullText := collectFullResponse(c, streamCh)
+	fullText := collectFullResponse(c.Request.Context(), streamCh)
 	c.JSON(http.StatusOK, openai.ChatCompletionResponse{
 		ID:     "chatcmpl-backend",
 		Object: "chat.completion",
@@ -112,6 +112,18 @@ func (h *Handler) handleChatCompletions(c *gin.Context) {
 			},
 		},
 	})
+}
+
+// eventContent 将 StreamEvent 转为用户可见的文本内容，统一 text 和 tool_call 的格式化逻辑
+func eventContent(msg backend.StreamEvent) string {
+	switch msg.Type {
+	case "text":
+		return msg.Content
+	case "tool_call":
+		return fmt.Sprintf("\n> 🔨 Tool Call: %s\n", msg.Content)
+	default:
+		return ""
+	}
 }
 
 func streamResponse(c *gin.Context, streamCh <-chan backend.StreamEvent, model string) {
@@ -129,23 +141,13 @@ func streamResponse(c *gin.Context, streamCh <-chan backend.StreamEvent, model s
 				return false
 			}
 
-			if msg.Type == "text" && msg.Content != "" {
+			if content := eventContent(msg); content != "" {
 				delta := openai.ChatCompletionStreamResponse{
 					ID:     "stream",
 					Object: "chat.completion.chunk",
 					Model:  model,
 					Choices: []openai.ChatCompletionStreamChoice{
-						{Delta: openai.ChatCompletionStreamChoiceDelta{Role: openai.ChatMessageRoleAssistant, Content: msg.Content}},
-					},
-				}
-				c.SSEvent("", delta)
-			} else if msg.Type == "tool_call" {
-				delta := openai.ChatCompletionStreamResponse{
-					ID:     "stream",
-					Object: "chat.completion.chunk",
-					Model:  model,
-					Choices: []openai.ChatCompletionStreamChoice{
-						{Delta: openai.ChatCompletionStreamChoiceDelta{Role: openai.ChatMessageRoleAssistant, Content: fmt.Sprintf("\n> 🔨 Tool Call: %s\n", msg.Content)}},
+						{Delta: openai.ChatCompletionStreamChoiceDelta{Role: openai.ChatMessageRoleAssistant, Content: content}},
 					},
 				}
 				c.SSEvent("", delta)
@@ -157,7 +159,7 @@ func streamResponse(c *gin.Context, streamCh <-chan backend.StreamEvent, model s
 	})
 }
 
-func collectFullResponse(c *gin.Context, streamCh <-chan backend.StreamEvent) string {
+func collectFullResponse(ctx context.Context, streamCh <-chan backend.StreamEvent) string {
 	var sb strings.Builder
 	for {
 		select {
@@ -165,12 +167,8 @@ func collectFullResponse(c *gin.Context, streamCh <-chan backend.StreamEvent) st
 			if !ok || msg.Type == "done" || msg.Type == "error" {
 				return sb.String()
 			}
-			if msg.Type == "text" {
-				sb.WriteString(msg.Content)
-			} else if msg.Type == "tool_call" {
-				sb.WriteString(fmt.Sprintf("\n> 🔨 Tool Call: %s\n", msg.Content))
-			}
-		case <-c.Request.Context().Done():
+			sb.WriteString(eventContent(msg))
+		case <-ctx.Done():
 			return sb.String()
 		}
 	}
